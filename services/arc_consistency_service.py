@@ -1,4 +1,7 @@
 class ArcConsistencyService:
+    # This method returns if the sudoko_grid is solvable or not
+    # If solvable, then it returns the grid after assigning new values in it
+    # If not solvable, then it returns None
     @staticmethod
     def check_consistency(sudoko_grid):
         # Step 1: Convert 2D array to 3D array
@@ -35,7 +38,6 @@ class ArcConsistencyService:
 
                                         # If the current list becomes empty, return False
                                         if not x:
-                                            print(i, j, k, l)
                                             return False, None
 
             # If no changes were made in this iteration, break the loop
@@ -67,7 +69,7 @@ class ArcConsistencyService:
 
 if __name__ =='__main__':
     grid = [
-        [5, 3, 0, 0, 7, 0, 0, 0, 0],
+        [5, 3, 3, 0, 7, 0, 0, 0, 0],
         [6, 0, 0, 1, 9, 5, 0, 0, 0],
         [0, 9, 8, 0, 0, 0, 0, 6, 0],
         [8, 0, 0, 0, 6, 0, 0, 0, 3],
@@ -80,5 +82,7 @@ if __name__ =='__main__':
     arc = ArcConsistencyService()
 
     hi, bro = arc.check_consistency(grid)
-    for row in bro:
-        print(row)
+    print(hi)
+    if bro is not None:
+        for row in bro:
+            print(row)
