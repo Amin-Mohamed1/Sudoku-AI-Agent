@@ -1,76 +1,72 @@
 class ArcConsistencyService:
-    # This method returns if the sudoko_grid is solvable or not
-    # If solvable, then it returns the grid after assigning new values in it
-    # If not solvable, then it returns None
     @staticmethod
-    def check_consistency(sudoko_grid):
-        # Step 1: Convert 2D array to 3D array
-        n, m = len(sudoko_grid), len(sudoko_grid[0])
-        three_d_array = [[[val] if val != 0 else list(range(1, 10)) for val in row] for row in sudoko_grid]
+    def check_consistency(sudoku_grid):
+        # Step 1: Convert 2D array to 3D array (domains)
+        n, m = len(sudoku_grid), len(sudoku_grid[0])
+        three_d_array = [[[val] if val != 0 else list(range(1, 10)) for val in row] for row in sudoku_grid]
 
-        # Step 2: Start consistency logic
+        # Step 2: Arc Consistency Logic
         while True:
-            flag = False  # Flag to track if any changes were made
+            flag = False
 
-            # Double loop to iterate over the 2D array
             for i in range(n):
                 for j in range(m):
-                    x = three_d_array[i][j]  # Current list for (i, j)
+                    x = three_d_array[i][j]  # Domain of (i, j)
 
                     if len(x) == 0:
                         continue
 
-                    # Double loop to iterate over the 2D array for neighbors
                     for k in range(n):
                         for l in range(m):
-                            # Check if (k, l) is a neighbor of (i, j)
+                            is_neighbor = ArcConsistencyService.__is_on_same_row_or_column(i, j, k, l) or \
+                                          ArcConsistencyService.__is_on_same_box(i, j, k, l)
 
-
-                            is_on_same_row_or_column = ArcConsistencyService.__is_on_same_row_or_column(i, j, k, l)
-                            is_on_same_box = ArcConsistencyService.__is_on_same_box(i, j, k, l)
-                            if is_on_same_row_or_column or is_on_same_box :
-                                y = three_d_array[k][l]  # Neighbor list for (k, l)
-
-                                # If the neighbor has only one value, remove it from the current list
+                            if is_neighbor:
+                                y = three_d_array[k][l]
                                 if len(y) == 1:
                                     z = y[0]
                                     if z in x:
                                         x.remove(z)
-                                        # if len(x) == 1:
-                                        flag = True  # A change was made
+                                        flag = True
 
-                                        # If the current list becomes empty, return False
                                         if not x:
-                                            return False, None
+                                            return False, None  # No solution exists
 
-            # If no changes were made in this iteration, break the loop
             if not flag:
                 break
 
-        # Step 3: Reconstruct the 2D array from the 3D array
-        result_2d = [[cell[0] if len(cell) == 1 else 0 for cell in row] for row in three_d_array]
+        # Step 3: Backtracking to solve the grid
+        solved, result = ArcConsistencyService.__backtracking_solver(three_d_array)
+        return solved, result
 
-        return True, result_2d
+    @staticmethod
+    def __backtracking_solver(grid):
+        for i in range(9):
+            for j in range(9):
+                if len(grid[i][j]) > 1:
+                    for value in grid[i][j]:
+                        new_grid = [row[:] for row in grid]
+                        new_grid[i][j] = [value]
+                        consistent, result = ArcConsistencyService.check_consistency(
+                            [[cell[0] if len(cell) == 1 else 0 for cell in row] for row in new_grid]
+                        )
+
+                        if consistent:
+                            return True, result
+
+                    return False, None
+        solved_grid = [[cell[0] if len(cell) == 1 else 0 for cell in row] for row in grid]
+        return True, solved_grid
 
     @staticmethod
     def __is_on_same_row_or_column(i, j, k, l):
-        is_not_same_element = ArcConsistencyService.__is_not_same_element(i, j, k, l)
-        return (i == k or j == l) and is_not_same_element
+        return (i == k or j == l) and (i != k or j != l)
 
     @staticmethod
     def __is_on_same_box(i, j, k, l):
-        is_not_same_element = ArcConsistencyService.__is_not_same_element(i, j , k, l)
-        i = i/3
-        j = j/3
-        k = k/3
-        l = l/3
-        return i == k and j == l and is_not_same_element
+        return (i // 3 == k // 3 and j // 3 == l // 3) and (i != k or j != l)
 
-    @staticmethod
-    def __is_not_same_element(i, j, k, l):
-        return not(i == k and j == l)
-
-if __name__ =='__main__':
+if __name__ == '__main__':
     normal_grid = [
         [5, 3, 0, 0, 7, 0, 0, 0, 0],
         [6, 0, 0, 1, 9, 5, 0, 0, 0],
@@ -82,54 +78,11 @@ if __name__ =='__main__':
         [0, 0, 0, 4, 1, 9, 0, 0, 5],
         [0, 0, 0, 0, 8, 0, 0, 7, 9],
     ]
-    empty_grid = [
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0]
-    ]
-    wrong_grid = [
-        [5, 3, 3, 0, 7, 0, 0, 0, 0],
-        [6, 0, 0, 1, 9, 5, 0, 0, 0],
-        [0, 9, 8, 0, 0, 0, 0, 6, 0],
-        [8, 0, 0, 0, 6, 0, 0, 0, 3],
-        [4, 0, 0, 8, 0, 3, 0, 0, 1],
-        [7, 0, 0, 0, 2, 0, 0, 0, 6],
-        [0, 6, 0, 0, 0, 0, 2, 8, 0],
-        [0, 0, 0, 4, 1, 9, 0, 0, 5],
-        [0, 0, 0, 0, 8, 0, 0, 7, 9],
-    ]
-    semi_complete_grid = [
-        [5, 3, 4, 6, 7, 8, 9, 1, 2],
-        [6, 7, 2, 1, 9, 5, 3, 4, 8],
-        [1, 9, 8, 3, 4, 2, 5, 6, 7],
-        [8, 5, 9, 7, 6, 1, 4, 2, 3],
-        [4, 2, 6, 8, 5, 3, 7, 9, 1],
-        [7, 1, 3, 9, 2, 4, 8, 5, 6],
-        [9, 6, 1, 5, 3, 7, 2, 8, 4],
-        [2, 8, 7, 4, 1, 9, 6, 3, 5],
-        [3, 4, 5, 2, 8, 6, 1, 7, 0]
-    ]
-    complete_grid = [
-        [5, 3, 4, 6, 7, 8, 9, 1, 2],
-        [6, 7, 2, 1, 9, 5, 3, 4, 8],
-        [1, 9, 8, 3, 4, 2, 5, 6, 7],
-        [8, 5, 9, 7, 6, 1, 4, 2, 3],
-        [4, 2, 6, 8, 5, 3, 7, 9, 1],
-        [7, 1, 3, 9, 2, 4, 8, 5, 6],
-        [9, 6, 1, 5, 3, 7, 2, 8, 4],
-        [2, 8, 7, 4, 1, 9, 6, 3, 5],
-        [3, 4, 5, 2, 8, 6, 1, 7, 9]
-    ]
 
     arc = ArcConsistencyService()
-    hi, bro = arc.check_consistency(complete_grid)
-    print(hi)
-    if bro is not None:
-        for row in bro:
+    solvable, solved_grid = arc.check_consistency(normal_grid)
+
+    print("Solvable:", solvable)
+    if solved_grid is not None:
+        for row in solved_grid:
             print(row)
