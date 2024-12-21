@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QDialog
+from PyQt5.QtWidgets import QDialog, QLineEdit
 from PyQt5.uic import loadUi
 
 
@@ -8,7 +8,8 @@ class MainWindow(QDialog):
         loadUi("GUI\\sudoku-gui-2.ui", self)
         self.setWindowTitle("Sudoku Solver")
         self.difficulty: str = "Easy"
-        self.sudoku_grid: list[list[int]] = []
+        self.sudoku_grid: list[list[int]] = [[0 for _ in range(9)] for _ in range(9)]
+        self.gui_grid: list[list[QLineEdit]] = self.set_up_gui_grid()
         modes: list[str] = ["Easy", "Medium", "Hard"]
         self.mode_combobox.addItems(modes)
         self.mode_combobox.setCurrentIndex(0)
@@ -24,7 +25,38 @@ class MainWindow(QDialog):
         pass
 
     def clear_sudoku(self):
-        self.sudoku_grid = []
+        self.sudoku_grid = [[0 for _ in range(9)] for _ in range(9)]
+        for i in range(9):
+            for j in range(9):
+                self.gui_grid[i][j].setText("")
 
     def randomize_sudoku(self):
         pass
+
+    def show_board(self):
+        for i in range(9):
+            for j in range(9):
+                if self.sudoku_grid[i][j] != 0:
+                    self.gui_grid[i][j].setText(str(self.sudoku_grid[i][j]))
+                else:
+                    self.gui_grid[i][j].setText("")
+
+    def read_board(self):
+        for i in range(9):
+            for j in range(9):
+                value = self.gui_grid[i][j].text()
+                if value == "":
+                    self.sudoku_grid[i][j] = 0
+                else:
+                    self.sudoku_grid[i][j] = int(value)
+
+    def set_up_gui_grid(self) -> list[list[QLineEdit]]:
+        widget_list = []
+        for i in range(9):
+            row = []
+            for j in range(9):
+                widget = self.findChild(QLineEdit, f"board_label{i}_{j}")
+                row.append(widget)
+            widget_list.append(row)
+
+        return widget_list
