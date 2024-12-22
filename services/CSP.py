@@ -1,5 +1,6 @@
 from utils import generate_variables, generate_domains, generate_neighbors
 from colorama import Fore, Style, init
+import random
 init(autoreset=True)
 
 def check_constraint(val1, val2):
@@ -43,11 +44,36 @@ class CSP:
         for dom_xi in set(self.domains[xi]):
             # we need to check that there is valid value in xj's domain
             if not any(check_constraint(dom_xi, dom_xj) for dom_xj in self.domains[xj]):
+                print(f"Inconsistent arc detected: ({xi}, {xj})")
+                print(f"  - Value {dom_xi} from {xi}'s domain is inconsistent with {xj}'s domain.")
+                print(f"  - {xi}'s domain before removal: {self.domains[xi]}")
+                print(f"  - {xj}'s domain: {self.domains[xj]}")
                 # we need to remove the dom_xi from the xi's domain as no valid dom_xj for it
                 self.domains[xi].remove(dom_xi)
+                print(f"  - {xi}'s domain after removal: {self.domains[xi]}")
+                print(f"  - {xj}'s domain: {self.domains[xj]}")
                 # flag to add the arcs
                 is_revised = True
         return is_revised
+
+    # def backtracking_search(self, assignment={}):
+    #     # checking that there is no need for backtracking
+    #     if len(assignment) == len(self.variables):
+    #         return assignment
+    #
+    #     # choosing un-assigned variables
+    #     var = self.select_unassigned_variable(assignment)
+    #     for value in self.domains[var]:
+    #         new_assignment = assignment.copy()
+    #         # assigning the value to the var
+    #         new_assignment[var] = value
+    #         # checking consistency with other neighbours
+    #         if self.is_consistent(var, new_assignment):
+    #             # continuing to the next vars
+    #             result = self.backtracking_search(new_assignment)
+    #             if result:
+    #                 return result
+    #     return None
 
     def backtracking_search(self, assignment={}):
         # checking that there is no need for backtracking
@@ -60,20 +86,66 @@ class CSP:
             new_assignment = assignment.copy()
             # assigning the value to the var
             new_assignment[var] = value
-            # checking consistency with other neighbours
+
+            # saving original domains in case we need to backtrack
+            original_domains = {v: self.domains[v][:] for v in self.variables}
+
+            # if valid assignment
             if self.is_consistent(var, new_assignment):
-                # continuing to the next vars
-                result = self.backtracking_search(new_assignment)
-                if result:
-                    return result
+                # assigning it
+                self.domains[var] = [value]
+                if self.ac3():
+                    result = self.backtracking_search(new_assignment)
+                    if result:
+                        return result
+
+            # back to original domains before backtracking
+            self.domains = original_domains
         return None
 
     def select_unassigned_variable(self, assignment):
-        # looping on the vars to pick un-assigned var
+        candidates = []
+        smallest_domain_size = float('inf')
+
         for var in self.variables:
             if var not in assignment:
-                return var
-        return None
+                domain_size = len(self.domains[var])
+
+                # getting the minimum domain variable
+                if domain_size < smallest_domain_size:
+                    smallest_domain_size = domain_size
+                    candidates = [var]
+
+                # adding it as a candidate as it's like the best
+                elif domain_size == smallest_domain_size:
+                    candidates.append(var)
+
+        # no need for the other policy
+        if len(candidates) == 1:
+            return candidates[0]
+
+        min_conflicts = float('inf')
+        best_candidates = []
+
+        # for each var in the candidates calculating the number of conflicts
+        for var in candidates:
+            conflicts = 0
+            for value in self.domains[var]:
+                for neighbor in self.neighbors[var]:
+                    if neighbor not in assignment and value in self.domains[neighbor]:
+                        conflicts += 1
+
+            # adding it as a candidate
+            if conflicts < min_conflicts:
+                min_conflicts = conflicts
+                best_candidates = [var]
+
+            # adding it as it's like the best
+            elif conflicts == min_conflicts:
+                best_candidates.append(var)
+
+        # broken at random if ties are present
+        return random.choice(best_candidates)
 
 
 def print_sudoku_grid(solution):
@@ -109,6 +181,16 @@ def main():
         [0, 6, 0, 0, 0, 0, 2, 8, 0],
         [0, 0, 0, 4, 1, 9, 0, 0, 5],
         [0, 0, 0, 0, 8, 0, 0, 7, 9]
+    #
+        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        # [0, 0, 0, 0, 0, 0, 0, 0, 0]
     ]
     variables = generate_variables()
     domains = generate_domains(initial_board)
@@ -116,7 +198,7 @@ def main():
 
     csp = CSP(variables, domains, neighbors)
     if csp.ac3():
-        # continuing the solution by backtracking 
+        # continuing the solution by backtracking
         solution = csp.backtracking_search()
         if solution:
             print("Solution found:\n")
