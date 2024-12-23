@@ -1,4 +1,4 @@
-from utils import generate_variables, generate_domains, generate_neighbors
+from modules.utils import generate_variables, generate_domains, generate_neighbors
 from colorama import Fore, Style, init
 import random
 init(autoreset=True)
@@ -7,13 +7,13 @@ def check_constraint(val1, val2):
     return val1 != val2
 
 class CSP:
-    def __init__(self, variables, domains, neighbors):
+    def __init__(self, board: list[list[int]]):
         # list of vars
-        self.variables = variables
+        self.variables = generate_variables()
         # dict of domains for each var
-        self.domains = domains
+        self.domains = generate_domains(board)
         # dict of neighbours for each var
-        self.neighbors = neighbors
+        self.neighbors = generate_neighbors()
 
 
     def is_consistent(self, variable, assignment):
@@ -147,6 +147,36 @@ class CSP:
         # broken at random if ties are present
         return random.choice(best_candidates)
 
+    def find_all_solutions(self, assignment={}, limit=2):
+        solutions = []
+
+        def recursive_search(assignment):
+            if len(assignment) == len(self.variables):
+                solutions.append(assignment.copy())
+                return
+
+            var = self.select_unassigned_variable(assignment)
+            for value in self.domains[var]:
+                new_assignment = assignment.copy()
+                new_assignment[var] = value
+
+                # Backup the current state of the domains
+                original_domains = {v: self.domains[v][:] for v in self.variables}
+
+                if self.is_consistent(var, new_assignment):
+                    self.domains[var] = [value]  # Assign the value to the domain
+                    if self.ac3():  # Perform AC3 to propagate constraints
+                        recursive_search(new_assignment)
+
+                # Restore the original domains after backtracking
+                self.domains = original_domains
+
+                if len(solutions) >= limit:  # Stop early if multiple solutions found
+                    return
+
+        recursive_search(assignment)
+        return solutions
+
 
 def print_sudoku_grid(solution):
     number_colors = {
@@ -172,31 +202,27 @@ def print_sudoku_grid(solution):
         print(row.strip())
 def main():
     initial_board = [
-        [5, 3, 0, 0, 7, 0, 0, 0, 0],
-        [6, 0, 0, 1, 9, 5, 0, 0, 0],
-        [0, 9, 8, 0, 0, 0, 0, 6, 0],
-        [8, 0, 0, 0, 6, 0, 0, 0, 3],
-        [4, 0, 0, 8, 0, 3, 0, 0, 1],
-        [7, 0, 0, 0, 2, 0, 0, 0, 6],
-        [0, 6, 0, 0, 0, 0, 2, 8, 0],
-        [0, 0, 0, 4, 1, 9, 0, 0, 5],
-        [0, 0, 0, 0, 8, 0, 0, 7, 9]
-    #
-        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        # [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        # [0, 0, 0, 0, 0, 0, 0, 0, 0]
-    ]
-    variables = generate_variables()
-    domains = generate_domains(initial_board)
-    neighbors = generate_neighbors()
+        # [5, 3, 0, 0, 7, 0, 0, 0, 0],
+        # [6, 0, 0, 1, 9, 5, 0, 0, 0],
+        # [0, 9, 8, 0, 0, 0, 0, 6, 0],
+        # [8, 0, 0, 0, 6, 0, 0, 0, 3],
+        # [4, 0, 0, 8, 0, 3, 0, 0, 1],
+        # [7, 0, 0, 0, 2, 0, 0, 0, 6],
+        # [0, 6, 0, 0, 0, 0, 2, 8, 0],
+        # [0, 0, 0, 4, 1, 9, 0, 0, 5],
+        # [0, 0, 0, 0, 8, 0, 0, 7, 9]
 
-    csp = CSP(variables, domains, neighbors)
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    ]
+    csp = CSP(initial_board)
     if csp.ac3():
         # continuing the solution by backtracking
         solution = csp.backtracking_search()
