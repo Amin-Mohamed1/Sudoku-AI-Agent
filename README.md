@@ -1,1 +1,3 @@
 # SudokuGame
+
+Sudoku AI using Arc Consistency is an approach to solving Sudoku puzzles efficiently by reducing the problem's complexity through constraint satisfaction techniques. Arc Consistency is a concept from the field of constraint satisfaction problems (CSPs), where variables must satisfy certain constraints. In Sudoku, these constraints include the requirement that each number from 1 to 9 must appear only once in each row, column, and subgrid. Arc Consistency helps by iteratively narrowing down the possible values for each cell, ensuring that each cell's domain of possible numbers remains consistent with the constraints of its neighboring cells. 
